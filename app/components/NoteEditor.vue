@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { useConfirm } from '~/composables/useConfirm'
+import { useUndoRedoHotkeys } from '~/composables/useHotkeys'
 import { useEditorStore } from '~/stores/editor'
 
 const editor = useEditorStore()
 const { confirm } = useConfirm()
+
+useUndoRedoHotkeys()
 
 const onSave = () => {
   editor.save()

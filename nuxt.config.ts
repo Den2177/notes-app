@@ -4,6 +4,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@pinia/nuxt'],
   components: [{ path: '~/components', pathPrefix: false }],
+  // при ssr: false все страницы — одна и та же оболочка; без этого generate раскладывает /notes/new каталогом,
+  // и nginx редиректит на слеш, теряя порт при проброшенном 3000:80
+  nitro: { prerender: { crawlLinks: false } },
   css: ['~/assets/scss/main.scss'],
   vite: {
     css: {

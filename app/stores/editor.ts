@@ -4,7 +4,7 @@ import type { HistoryOp, TextOp } from '~/types/history'
 import type { Note } from '~/types/note'
 import { debounce } from '~/utils/debounce'
 import { applyOp, createHistory, revertOp } from '~/utils/history'
-import { clearDraft, saveDraft } from '~/utils/storage'
+import { clearDraft, readDraft, saveDraft } from '~/utils/storage'
 import { useNotesStore } from '~/stores/notes'
 
 const blankNote = (): Note => {
@@ -12,11 +12,21 @@ const blankNote = (): Note => {
   return { id: crypto.randomUUID(), title: '', todos: [], createdAt: now, updatedAt: now }
 }
 
+// сравниваем только то, что правит пользователь: расхождение по updatedAt само по себе не повод предлагать восстановление
+const sameContent = (a: Note, b: Note) =>
+  a.title === b.title
+  && a.todos.length === b.todos.length
+  && a.todos.every((todo, i) => {
+    const other = b.todos[i]
+    return !!other && todo.id === other.id && todo.text === other.text && todo.done === other.done
+  })
+
 export const useEditorStore = defineStore('editor', () => {
   const notes = useNotesStore()
 
   const note = ref<Note>(blankNote())
   const isNew = ref(false)
+  const isActive = ref(false)
   const canUndo = ref(false)
   const canRedo = ref(false)
 
@@ -65,14 +75,34 @@ export const useEditorStore = defineStore('editor', () => {
   const openNew = () => {
     note.value = blankNote()
     isNew.value = true
+    isActive.value = true
     reset()
   }
 
   const openExisting = (source: Note) => {
     note.value = { ...source, todos: source.todos.map(t => ({ ...t })) }
     isNew.value = false
+    isActive.value = true
     reset()
   }
+
+  const pendingDraft = () => {
+    const draft = readDraft()
+    if (!draft) return null
+    if (isNew.value) return draft.isNew ? draft.note : null
+    if (draft.noteId !== note.value.id) return null
+    const saved = notes.getById(note.value.id)
+    if (!saved || sameContent(saved, draft.note)) return null
+    return draft.note
+  }
+
+  const restoreDraft = (source: Note) => {
+    note.value = { ...source, todos: source.todos.map(t => ({ ...t })) }
+    // история в черновик не пишется, поэтому после восстановления стеки честно пустые
+    reset()
+  }
+
+  const dismissDraft = () => clearDraft()
 
   const setTitle = (value: string) => {
     commitText({ type: 'title/set', before: note.value.title, after: value })
@@ -122,17 +152,26 @@ export const useEditorStore = defineStore('editor', () => {
 
   const save = () => {
     notes.save(note.value)
+    isActive.value = false
     reset()
     clearDraft()
   }
 
+  const saveAsNew = () => {
+    note.value = { ...note.value, id: crypto.randomUUID(), createdAt: Date.now() }
+    isNew.value = true
+    save()
+  }
+
   const discard = () => {
+    isActive.value = false
     reset()
     clearDraft()
   }
 
   const removeNote = () => {
     notes.remove(note.value.id)
+    isActive.value = false
     reset()
     clearDraft()
   }
@@ -140,10 +179,14 @@ export const useEditorStore = defineStore('editor', () => {
   return {
     note,
     isNew,
+    isActive,
     canUndo,
     canRedo,
     openNew,
     openExisting,
+    pendingDraft,
+    restoreDraft,
+    dismissDraft,
     setTitle,
     setTodoText,
     toggleTodo,
@@ -153,6 +196,7 @@ export const useEditorStore = defineStore('editor', () => {
     undo,
     redo,
     save,
+    saveAsNew,
     discard,
     removeNote
   }

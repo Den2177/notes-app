@@ -1,12 +1,44 @@
 <script setup lang="ts">
+import { onMounted, watch } from 'vue'
 import { useConfirm } from '~/composables/useConfirm'
 import { useUndoRedoHotkeys } from '~/composables/useHotkeys'
 import { useEditorStore } from '~/stores/editor'
+import { useNotesStore } from '~/stores/notes'
 
 const editor = useEditorStore()
+const notes = useNotesStore()
 const { confirm } = useConfirm()
 
 useUndoRedoHotkeys()
+
+onMounted(async () => {
+  const draft = editor.pendingDraft()
+  if (!draft) return
+  const ok = await confirm({
+    title: 'Найден несохранённый черновик',
+    text: 'Восстановить изменения, сделанные в прошлый раз?',
+    confirmLabel: 'Восстановить',
+    cancelLabel: 'Отклонить'
+  })
+  if (ok) {
+    editor.restoreDraft(draft)
+    return
+  }
+  editor.dismissDraft()
+})
+
+watch(() => editor.isActive && !editor.isNew && !notes.getById(editor.note.id), async (gone) => {
+  if (!gone) return
+  const ok = await confirm({
+    title: 'Заметка была удалена в другой вкладке',
+    text: 'В списке её больше нет. Текущие изменения можно сохранить как новую заметку.',
+    confirmLabel: 'Сохранить как новую',
+    cancelLabel: 'Вернуться к списку'
+  })
+  if (ok) editor.saveAsNew()
+  else editor.discard()
+  navigateTo('/')
+})
 
 const onSave = () => {
   editor.save()

@@ -91,6 +91,14 @@ export const clearDraft = () => {
   localStorage.removeItem(DRAFT_KEY)
 }
 
+export const watchNotes = (onExternalChange: (notes: Note[]) => void) => {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== NOTES_KEY) return
+    // перечитываем через readNotes, а не парсим e.newValue: валидация и миграция должны быть одним и тем же кодом
+    onExternalChange(readNotes().notes)
+  })
+}
+
 export const installFlushOnHide = () => {
   const flushAll = () => {
     saveNotes.flush()

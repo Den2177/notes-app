@@ -1,12 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Note } from '~/types/note'
-import { installFlushOnHide, readNotes, saveNotes } from '~/utils/storage'
+import { installFlushOnHide, readNotes, saveNotes, watchNotes } from '~/utils/storage'
 
 export const useNotesStore = defineStore('notes', () => {
   const notes = ref<Note[]>(readNotes().notes)
 
   installFlushOnHide()
+  // список из другой вкладки принимаем как есть и обратно не пишем, иначе две вкладки затопчут друг друга
+  watchNotes((external) => {
+    notes.value = external
+  })
 
   const getById = (id: string) => notes.value.find(n => n.id === id)
 

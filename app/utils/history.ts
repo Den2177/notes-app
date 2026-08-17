@@ -11,7 +11,7 @@ export const applyOp = (note: Note, op: HistoryOp): void => {
       note.title = op.after
       return
     case 'todo/add':
-      // копия, иначе последующие правки пункта уедут в объект, лежащий в истории, и undo вернёт уже изменённый текст
+      // вставляем копию: в истории лежат данные, а не ссылки на живые пункты, иначе запись меняется вместе с заметкой
       note.todos.splice(op.index, 0, { ...op.item })
       return
     case 'todo/remove':

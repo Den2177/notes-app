@@ -132,6 +132,13 @@ export const useEditorStore = defineStore('editor', () => {
     commit({ type: 'todo/remove', index, item: { ...todo } })
   }
 
+  const blurTodo = (id: string) => {
+    flushText()
+    const todo = note.value.todos.find(t => t.id === id)
+    if (!todo || todo.text.trim()) return
+    removeTodo(id)
+  }
+
   const undo = () => {
     const op = history.undo()
     pauseFlush.cancel()
@@ -192,6 +199,7 @@ export const useEditorStore = defineStore('editor', () => {
     toggleTodo,
     addTodo,
     removeTodo,
+    blurTodo,
     flushText,
     undo,
     redo,

@@ -102,7 +102,7 @@ const onRemove = async () => {
       @add="editor.addTodo()"
       @toggle="editor.toggleTodo"
       @text="editor.setTodoText"
-      @blur="editor.flushText()"
+      @blur="editor.blurTodo"
       @enter="editor.flushText()"
       @remove="editor.removeTodo"
     />
